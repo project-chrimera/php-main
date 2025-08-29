@@ -4,30 +4,6 @@ $invite="https://discord.gg/D3xwCnt86Y";
 echo "<p>Please join the discord server to continue<br> <a href=\"$invite\" target=\"_blank\">yap2stw discord</a> member role after joining</p>";
 
 }
-
-function checkDiscordRoleWithSessionCache(string $requiredRole): bool {
-    global $apiURLBase;
-    global $_SESSION;
-
-    if (session('access_token')) {
-        $discorduser = apiRequest($apiURLBase);
-
-        if (get_username($discorduser->id) === null) {
-            $_SESSION['discord_id'] = $discorduser->id;
-            $_SESSION['email'] = $discorduser->email;
-            header('Location: ./signup.php');
-            die();
-        }
-    }
-
-    $aUser = set_cookieSession($discorduser->id);
-    $aRoles = get_roles($discorduser->id);
-
-    return array_key_exists($requiredRole, $aRoles);
-}
-
-
-
 function apiRequest($url, $post=FALSE, $headers=array()) {
   $ch = curl_init($url);
   curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
@@ -190,40 +166,151 @@ function del_cookieSession() {
 
 
 //EAGLE SCRIPTS
-function add_roles($user_id,$role_name) {
-  if (!is_numeric($user_id)) {
-    return false;
-  }
-  $response = file_get_contents('http://127.0.0.1:5000/api/add_roles/'.$user_id.'/'.$role_name);
-  if ($response = json_decode($response,true)) {
-     return $response;
-  } else {
-    return false;
-  }
+function call_api($endpoint, $token, $method = 'GET', $data = []) {
+    $url = 'http://127.0.0.1:5000' . $endpoint;
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+
+    // Set the custom header for the API token
+    $headers = [
+        'X-API-Key: ' . $token,
+    ];
+
+    if ($method === 'POST' && !empty($data)) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        $headers[] = 'Content-Type: application/json';
+    }
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return [
+        'body' => json_decode($response, true),
+        'http_code' => $http_code
+    ];
 }
-function del_roles($user_id,$role_name) {
-  if (!is_numeric($user_id)) {
+/**
+ * Retrieves the roles of a Discord user via the bot's API.
+ *
+ * @param int $user_id The Discord user's ID.
+ * @param string $api_token The API key for authentication.
+ * @return array|false An array of roles on success, or false on failure.
+ */
+function eagle_get_roles($user_id, $api_token) {
+    if (!is_numeric($user_id)) {
+        return false;
+    }
+
+    $endpoint = '/api/get_roles/' . $user_id;
+    $response = call_api($endpoint, $api_token, 'GET');
+
+    if ($response['http_code'] === 200 && isset($response['body']['roles'])) {
+        return $response['body']['roles'];
+    }
+
     return false;
-  }
-  $response = file_get_contents('http://127.0.0.1:5000/api/del_roles/'.$user_id.'/'.$role_name);
-  if ($response = json_decode($response,true)) {
-     return $response;
-  } else {
-    return false;
-  }
 }
 
-function kick($user_id) {
-  if (!is_numeric($user_id)) {
+
+/**
+ * Soft-bans a Discord user via the bot's API.
+ *
+ * @param int|string $identifier The Discord user's ID or username.
+ * @param string $api_token The API key for authentication.
+ * @return array|false The API response on success, or false on failure.
+ */
+function eagle_soft_ban($identifier, $api_token) {
+    $endpoint = '/api/soft_ban/' . urlencode($identifier);
+    $response = call_api($endpoint, $api_token, 'POST');
+
+    if ($response['http_code'] === 200 && isset($response['body']['status']) && $response['body']['status'] === 'success') {
+        return $response['body'];
+    }
+
     return false;
-  }
-  $response = file_get_contents('http://127.0.0.1:5000/api/kick/'.$user_id);
-  if ($response = json_decode($response,true)) {
-     return $response;
-  } else {
-    return false;
-  }
 }
+
+
+/**
+ * Adds a role to a Discord user via the bot's API.
+ *
+ * @param int $user_id The Discord user's ID.
+ * @param string $role_name The name of the role to add.
+ * @param string $api_token The API key for authentication.
+ * @return array|false The API response on success, or false on failure.
+ */
+function add_roles($user_id, $role_name, $api_token) {
+    if (!is_numeric($user_id)) {
+        return false;
+    }
+
+    $endpoint = '/api/add_roles/' . $user_id . '/' . urlencode($role_name);
+    $response = call_api($endpoint, $api_token, 'POST');
+
+    // Check for a successful HTTP status code and a "success" status in the body.
+    if ($response['http_code'] === 200 && isset($response['body']['status']) && $response['body']['status'] === 'success') {
+        return $response['body'];
+    }
+
+    return false;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+/**
+ * Removes a role from a Discord user via the bot's API.
+ *
+ * @param int $user_id The Discord user's ID.
+ * @param string $role_name The name of the role to remove.
+ * @param string $api_token The API key for authentication.
+ * @return array|false The API response on success, or false on failure.
+ */
+function del_roles($user_id, $role_name, $api_token) {
+    if (!is_numeric($user_id)) {
+        return false;
+    }
+
+    $endpoint = '/api/del_roles/' . $user_id . '/' . urlencode($role_name);
+    $response = call_api($endpoint, $api_token, 'POST');
+
+    if ($response['http_code'] === 200 && isset($response['body']['status']) && $response['body']['status'] === 'success') {
+        return $response['body'];
+    }
+
+    return false;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+/**
+ * Kicks a Discord user from the guild via the bot's API.
+ *
+ * @param int $user_id The Discord user's ID.
+ * @param string $api_token The API key for authentication.
+ * @return array|false The API response on success, or false on failure.
+ */
+function kick($user_id, $api_token) {
+    if (!is_numeric($user_id)) {
+        return false;
+    }
+
+    $endpoint = '/api/kick/' . $user_id;
+    $response = call_api($endpoint, $api_token, 'POST');
+
+    if ($response['http_code'] === 200 && isset($response['body']['status']) && $response['body']['status'] === 'success') {
+        return $response['body'];
+    }
+
+    return false;
+}
+
+
 //DB
 function get_username($user_id) {
     if (!is_numeric($user_id)) return false;

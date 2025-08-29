@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Aug 28, 2025 at 07:30 PM
+-- Generation Time: Aug 29, 2025 at 08:40 PM
 -- Server version: 11.8.2-MariaDB-1 from Debian
 -- PHP Version: 8.4.11
 
@@ -18,10 +18,8 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `chrimera`
+-- Database: `yap2stw`
 --
-CREATE DATABASE IF NOT EXISTS `chrimera` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `chrimera`;yap2stw
 
 -- --------------------------------------------------------
 
@@ -32,7 +30,8 @@ USE `chrimera`;yap2stw
 CREATE TABLE `roles` (
   `id` bigint(20) NOT NULL,
   `role_id` bigint(20) NOT NULL,
-  `name` varchar(100) NOT NULL
+  `name` varchar(100) NOT NULL,
+  `quota` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -59,6 +58,7 @@ CREATE TABLE `users` (
   `discord_id` bigint(20) NOT NULL,
   `name` varchar(50) NOT NULL,
   `email` varchar(200) NOT NULL,
+  `token` varchar(100) NOT NULL,
   `agent` varchar(100) DEFAULT NULL,
   `joined` datetime NOT NULL DEFAULT current_timestamp(),
   `banned` tinyint(1) NOT NULL DEFAULT 0,
@@ -133,3 +133,4 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+

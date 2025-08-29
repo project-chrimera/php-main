@@ -24,8 +24,9 @@ if (session('access_token')) {
         'roles'         => get_roles($discorduser->id),
         'session'       => set_cookieSession($discorduser->id)
     ];
+    $_SESSION['user'] = $aUser;
+    $_SESSION['discord_id'] = $discorduser->id;
 }
 
 
-#echo "foo";
 ?>

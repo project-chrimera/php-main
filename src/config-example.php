@@ -22,5 +22,6 @@ define('LDAP_ADMIN_DN', 'cn=admin,dc=chrimera,dc=org');
 define('LDAP_ADMIN_PASS', 'oneworld');
 define('LDAP_BASE_DN', 'dc=chrimera,dc=org');
 
+$api_token = 'same token as eagle discord bot';
 
 ?>
