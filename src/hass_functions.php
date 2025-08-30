@@ -34,31 +34,41 @@ function hass_render_action(int $action_id) {
     // Check if form submitted
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = [];
+
         foreach ($fields as $f) {
             $param = $f['parameter_name'];
             $type = $f['item_type'];
 
+            // Support multiple values for this parameter
+            $value = $_POST[$param] ?? null;
+
             switch ($type) {
                 case 'checkbox':
-                    $data[$param] = isset($_POST[$param]) ? true : false;
+                    $data[$param] = !empty($value);
                     break;
 
                 case 'number':
-                    $data[$param] = is_numeric($_POST[$param] ?? null) ? +$_POST[$param] : null;
+                    $data[$param] = is_numeric($value) ? +$value : null;
                     break;
 
                 case 'select':
+                    $options = $f['item_options'] ? json_decode($f['item_options'], true) : [];
+                    if (!in_array($value, $options)) {
+                        echo "<p style='color:red;'>Invalid value for {$param}. Options: " . implode(", ", $options) . "</p>";
+                        return;
+                    }
+                    $data[$param] = $value;
+                    break;
+
                 case 'text':
                 default:
-                    $data[$param] = $_POST[$param] ?? null;
-                    break;
+                    $data[$param] = $value;
             }
         }
 
         // Call HA service
         $resp = ha_call_service($action['ha_domain'], $action['ha_service'], $data);
 
-        // Display result only
         if ($resp['http_code'] >= 200 && $resp['http_code'] < 300) {
             echo "<p style='color:green;'>Action '{$action['name']}' executed successfully (OK)</p>";
         } else {
@@ -66,10 +76,10 @@ function hass_render_action(int $action_id) {
             echo "<pre>" . print_r($resp, true) . "</pre>";
         }
 
-        return; // Do not render form after submit
+        return; // Stop rendering form after submit
     }
 
-    // Render form (only if GET request)
+    // Render form (GET)
     echo "<form method='POST'>";
     echo "<h3>" . htmlspecialchars($action['name']) . "</h3>";
 
