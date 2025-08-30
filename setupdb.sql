@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Aug 29, 2025 at 08:40 PM
+-- Generation Time: Aug 30, 2025 at 07:32 PM
 -- Server version: 11.8.2-MariaDB-1 from Debian
 -- PHP Version: 8.4.11
 
@@ -20,6 +20,75 @@ SET time_zone = "+00:00";
 --
 -- Database: `yap2stw`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `api_tokens`
+--
+
+CREATE TABLE `api_tokens` (
+  `id` int(11) NOT NULL,
+  `token` varchar(64) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `active` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hass_actions`
+--
+
+CREATE TABLE `hass_actions` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `ha_domain` varchar(50) NOT NULL,
+  `ha_service` varchar(50) NOT NULL,
+  `required_role` bigint(20) DEFAULT NULL COMMENT 'Discord role ID required to run this action',
+  `static_attributes` text DEFAULT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hass_action_fields`
+--
+
+CREATE TABLE `hass_action_fields` (
+  `id` bigint(20) NOT NULL,
+  `action_id` bigint(20) NOT NULL,
+  `item_id` bigint(20) NOT NULL,
+  `parameter_name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hass_action_runs`
+--
+
+CREATE TABLE `hass_action_runs` (
+  `id` int(11) NOT NULL,
+  `action_id` int(11) NOT NULL,
+  `discord_id` bigint(20) NOT NULL,
+  `data` text NOT NULL COMMENT 'JSON encoded form data',
+  `timestamp` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hass_items`
+--
+
+CREATE TABLE `hass_items` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `type` enum('text','number','select','checkbox') NOT NULL,
+  `options` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -83,6 +152,38 @@ CREATE TABLE `user_roles` (
 --
 
 --
+-- Indexes for table `api_tokens`
+--
+ALTER TABLE `api_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `token` (`token`);
+
+--
+-- Indexes for table `hass_actions`
+--
+ALTER TABLE `hass_actions`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `hass_action_fields`
+--
+ALTER TABLE `hass_action_fields`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `hass_action_runs`
+--
+ALTER TABLE `hass_action_runs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `action_id` (`action_id`);
+
+--
+-- Indexes for table `hass_items`
+--
+ALTER TABLE `hass_items`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `roles`
 --
 ALTER TABLE `roles`
@@ -112,6 +213,36 @@ ALTER TABLE `user_roles`
 --
 
 --
+-- AUTO_INCREMENT for table `api_tokens`
+--
+ALTER TABLE `api_tokens`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `hass_actions`
+--
+ALTER TABLE `hass_actions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `hass_action_fields`
+--
+ALTER TABLE `hass_action_fields`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `hass_action_runs`
+--
+ALTER TABLE `hass_action_runs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `hass_items`
+--
+ALTER TABLE `hass_items`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
@@ -128,6 +259,16 @@ ALTER TABLE `sessions`
 --
 ALTER TABLE `users`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `hass_action_runs`
+--
+ALTER TABLE `hass_action_runs`
+  ADD CONSTRAINT `hass_action_runs_ibfk_1` FOREIGN KEY (`action_id`) REFERENCES `hass_actions` (`id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

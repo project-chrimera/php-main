@@ -80,7 +80,18 @@ function checkDiscordRole(string ...$requiredRoles): bool {
     global $apiURLBase;
     global $_SESSION;
 
-    if (session('access_token')) {
+    // Get the current URL
+    $currentUrl = $_SERVER['REQUEST_URI'];
+
+    // Not logged in → redirect to login with ?url=current
+   $currentUrl = $_SERVER['REQUEST_URI'];
+
+    if (!session('access_token')) {
+        $loginUrl = './login.php?url=' . urlencode($currentUrl);
+        echo "<script>setTimeout(() => { window.location.href = '".htmlspecialchars($loginUrl, ENT_QUOTES)."'; }, 200);</script>";
+        echo "<noscript>Please <a href='".htmlspecialchars($loginUrl, ENT_QUOTES)."'>click here to login</a>.</noscript>";
+        die();
+    } else {
         $discorduser = apiRequest($apiURLBase);
 
         if (get_username($discorduser->id) === null) {
@@ -94,19 +105,37 @@ function checkDiscordRole(string ...$requiredRoles): bool {
 
             $aUser = set_cookieSession($discorduser->id);
             $aRoles = get_roles($discorduser->id);
-
+            $roleNames = array_column($aRoles, 'name');
             // Check if user has any of the required roles
             foreach ($requiredRoles as $role) {
-                if (array_key_exists($role, $aRoles)) {
+                if (in_array($role,$roleNames)) {
                     return true;
                 }
             }
-            return false;
         }
     }
-
-    return false;
+die("no access");
 }
+
+function get_roles_ids($discord_id) {
+    global $db;
+
+    if (!is_numeric($discord_id)) return [];
+
+    $stmt = $db->query("
+        SELECT r.role_id
+        FROM roles r
+        INNER JOIN user_roles ur ON r.id = ur.role_id
+        INNER JOIN users u ON ur.user_id = u.id
+        WHERE u.discord_id = ?
+    ", $discord_id);
+
+    $roles = $db->fetchAll($stmt);
+
+    // Flatten array to just IDs
+    return array_map(fn($r) => $r['role_id'], $roles);
+}
+
 
 
 
@@ -163,6 +192,21 @@ function del_cookieSession() {
 
     return false;
 }
+
+function get_user_discord_roles($discord_id) {
+    global $db;
+    $roles = $db->query("
+        SELECT r.discord_role_id
+        FROM hass_roles r
+        INNER JOIN user_roles ur ON r.id = ur.role_id
+        INNER JOIN users u ON ur.user_id = u.id
+        WHERE u.discord_id = ?
+    ", $discord_id);
+    
+    $result = $db->fetchAll($roles);
+    return array_column($result, 'discord_role_id'); // simple array of IDs
+}
+
 
 
 //EAGLE SCRIPTS
@@ -312,6 +356,25 @@ function kick($user_id, $api_token) {
 
 
 //DB
+/**
+ * Haalt de Discord ID op van een gebruiker via hun e-mailadres.
+ *
+ * @param string $email Het e-mailadres van de gebruiker.
+ * @return int|null Discord ID als gevonden, anders null.
+ */
+function get_discord_id_by_email(string $email): ?int {
+    global $db;
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return null; // Ongeldig e-mailadres
+    }
+
+    $stmt = $db->query("SELECT discord_id FROM users WHERE email = ? LIMIT 1", $email);
+    $row = $db->fetchArray($stmt);
+
+    return isset($row['discord_id']) ? (int)$row['discord_id'] : null;
+}
+
 function get_username($user_id) {
     if (!is_numeric($user_id)) return false;
     global $db;
