@@ -14,13 +14,18 @@ function hass_render_action(int $action_id) {
         echo "Action not found";
         return;
     }
+   $required_role_id = $action['required_role'];
+   $user_roles = $_SESSION['user']['roles_ids'] ?? [];
 
-    $required_role_id = $action['required_role'];
-    $user_roles = $_SESSION['user']['roles_ids'] ?? [];
-
-    if (!in_array($required_role_id, $user_roles)) {
+    // Als Discord groep 0, altijd toestaan
+    if ($required_role_id == 0) {
+    // Geen check nodig, laat actie altijd uitvoeren
+    } else {
+    // originele rol-check
+      if (!in_array($required_role_id, $user_roles)) {
         echo "You are not authenticated. Required role ID: {$required_role_id}";
         return;
+      } 
     }
 
     // Fetch action fields and associated items
@@ -32,7 +37,8 @@ function hass_render_action(int $action_id) {
     ", $action_id)->fetchAll();
 
     // Check if form submitted
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action_id'] ?? null) == $action_id) {
+    // verwerk alleen als dit form is ingediend
         $data = [];
 
         foreach ($fields as $f) {
@@ -81,6 +87,7 @@ function hass_render_action(int $action_id) {
 
     // Render form (GET)
     echo "<form method='POST'>";
+    echo "<input type='hidden' name='action_id' value='{$action['id']}'>";
     echo "<h3>" . htmlspecialchars($action['name']) . "</h3>";
 
     if (!empty($action['description'])) {

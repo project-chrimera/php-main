@@ -45,33 +45,6 @@ function get_ldap_connection() {
 }
 
 #Page access function
-
-/*function checkDiscordRole(string $requiredRole): bool {
-    global $apiURLBase;
-    global $_SESSION;
-
-    if (session('access_token')) {
-        $discorduser = apiRequest($apiURLBase);
-
-        if (get_username($discorduser->id) === null) {
-            $_SESSION['discord_id'] = $discorduser->id;
-            $_SESSION['email'] = $discorduser->email;
-            header('Location: ./signup.php');
-            die();
-        } else {
-            $_SESSION['discord_id'] = $discorduser->id;
-            $_SESSION['email'] = $discorduser->email;
-
-            $aUser = set_cookieSession($discorduser->id);
-            $aRoles = get_roles($discorduser->id);
-
-             return array_key_exists($requiredRole, $aRoles);
-        }
-    }
-
- return false;
-}
-*/
 /**
  * Check if the current Discord user has at least one of the required roles.
  * Usage: checkDiscordRole('role1', 'role2', 'role3');
@@ -80,31 +53,21 @@ function checkDiscordRole(string ...$requiredRoles): bool {
     global $apiURLBase;
     global $_SESSION;
 
-    // Get the current URL
-    $currentUrl = $_SERVER['REQUEST_URI'];
-
+#print_r($_SESSION);
+#die();
     // Not logged in → redirect to login with ?url=current
    $currentUrl = $_SERVER['REQUEST_URI'];
 
-    if (!session('access_token')) {
+
+    if (!($_SESSION['access_token'] or $_SESSION['discord_id'])) {
         $loginUrl = './login.php?url=' . urlencode($currentUrl);
         echo "<script>setTimeout(() => { window.location.href = '".htmlspecialchars($loginUrl, ENT_QUOTES)."'; }, 200);</script>";
         echo "<noscript>Please <a href='".htmlspecialchars($loginUrl, ENT_QUOTES)."'>click here to login</a>.</noscript>";
         die();
     } else {
-        $discorduser = apiRequest($apiURLBase);
-
-        if (get_username($discorduser->id) === null) {
-            $_SESSION['discord_id'] = $discorduser->id;
-            $_SESSION['email'] = $discorduser->email;
-          #  header('Location: ./signup.php');
-            die();
-        } else {
-            $_SESSION['discord_id'] = $discorduser->id;
-            $_SESSION['email'] = $discorduser->email;
-
-            $aUser = set_cookieSession($discorduser->id);
-            $aRoles = get_roles($discorduser->id);
+            $discorduser = $_SESSION['discord_id'];
+            $aUser = set_cookieSession($discorduser);
+            $aRoles = get_roles($discorduser);
             $roleNames = array_column($aRoles, 'name');
             // Check if user has any of the required roles
             foreach ($requiredRoles as $role) {
@@ -112,7 +75,6 @@ function checkDiscordRole(string ...$requiredRoles): bool {
                     return true;
                 }
             }
-        }
     }
 die("no access");
 }
